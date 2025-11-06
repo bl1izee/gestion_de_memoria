@@ -4,4 +4,3 @@ bl1izee -> Pablo Martín Martín\
 Hugok556 -> Hugo Cobos Gutiérrez
 
 [+] Promps
-ia ia o
