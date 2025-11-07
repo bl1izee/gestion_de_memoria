@@ -50,6 +50,8 @@ int main(void)
         tam_leido_bin = fread(Simul_RAM, sizeof(unsigned char), 4096, fd_bin);
         tam_leido_txt = fread(direccion_mem, sizeof(unsigned char), 4, fd_txt);
 
+
+
     } while (tam_leido_bin > 0 && tam_leido_txt > 0);
     
     
@@ -68,3 +70,9 @@ void LimpiarCACHE(T_CACHE_LINE tbl[NUM_FILAS]) {
             tbl[i].Data[j] = 0x23;
     }
 }
+
+void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque) {
+    // Guardamos la ETQ
+    
+}
+
