@@ -4,4 +4,4 @@ bl1izee -> Pablo Martín Martín\
 Hugok556 -> Hugo Cobos Gutiérrez
 
 [+] Promps\
-![alt text](image.png)
+![alt text](capturas/image.png)
