@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define TAM_LINEA 16
-#define NUM_FILAS 8
+#define NUM_FILAS 8 // Numero de filas de la caché
+#define TAM_LINEA 16 // Numero de bytes de cada linea de la caché
+#define TAM_RAM 4096 // Tamaño de la RAM
+#define TAM_TEXTO 100 // Tamaño del texto que puede almacenar con los accesos_memoria.txt
 
 // Variables globales
 int globaltime = 0;
-int numfallos = 0;
+int numFallos = 0;
 
 // Estructura del proceso
 typedef struct {
@@ -21,17 +23,22 @@ void VolcarCACHE(T_CACHE_LINE *tbl_cache);
 void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque);
 void TratarFallo(T_CACHE_LINE *tbl_cache, char *MRAM, int ETQ, int linea, int bloque);
 
-// Prototipo funcinoes propias
-void guardarRam(unsigned char Simul_RAM[], unsigned char tbl_ram[], int tam_ram);
+// Prototipo de funciones propias
+void imprimirEtadisticas(char* texto, int numAccesos);
+// Función que guarda el volcado de la caché en un archivo binario
 
 int main(void)
 {
     T_CACHE_LINE tbl_cache[NUM_FILAS]; // Variable caché
-    unsigned char Simul_RAM[4096]; // Variable que guarda lo leido del archivo binario (RAM), tamaño 4096 dicho por el enunciado
+    unsigned char Simul_RAM[TAM_RAM]; // Variable que guarda lo leido del archivo binario (RAM), tamaño 4096 dicho por el enunciado
+    unsigned int direccion_mem, ETQ, palabra, linea, bloque;
 
-    // Guarda el número de caracteres leido de cada archivo
-    int tam_leido_bin = 0;
-    int tam_leido_txt = 0;
+
+    // Variables que guardan el contenido que va pidiendo los accesos a memoria
+    char texto[TAM_TEXTO];
+    int pos_texto=0;
+
+    int numAccesos = 0; // Cuenta el numero de accesos a caché
 
     LimpiarCACHE(tbl_cache);
 
@@ -49,44 +56,38 @@ int main(void)
         return -1;
     }
 
-    do{
-        // Leemos el archivo binario (RAM) y la guardamos
-        tam_leido_bin = fread(Simul_RAM, sizeof(unsigned char), 4096, fd_bin);
-    } while (tam_leido_bin > 0);
+    // Leemos el archivo binario (RAM) y la guardamos
+    if (fread(Simul_RAM, sizeof(unsigned char), TAM_RAM, fd_bin) < 0) {
+        printf("[-] Error con la lecutra del archivo binario\n");
+        return -1;
+    }
 
-    do{
-        unsigned char direccion_mem_leida[4]; // Variable que guarda lo leido del archivo de texto, 4B = 3B caracteres hexa + 1B salto de linea
-        unsigned int direccion_mem, ETQ, palabra, linea, bloque;
-
-        // Leemos los archivos
-        tam_leido_txt = fread(direccion_mem_leida, sizeof(unsigned char), 4, fd_txt);
-
-        // Parseamos la dirección de str a hexadecimal y comprobamos que no se repita la última dirección
-        if (tam_leido_txt >= 4)
-        {
-            direccion_mem = (unsigned int)strtol(direccion_mem_leida, NULL, 16);
-        }
-
-        // Dividimos la dirección hexadecimal en sus campos
+    while (fscanf(fd_txt, "%X", &direccion_mem) == 1) {
+        // Dividimos la dirección en campos
         ParsearDireccion(direccion_mem, &ETQ, &palabra, &linea, &bloque);
 
         // Comprobamos si coinciden las etiquetas
         if (ETQ == tbl_cache[linea].ETQ) {
             globaltime += 1;
-            printf("\nT: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", globaltime, direccion_mem, ETQ, linea, palabra, bloque);
-
-            // Volcamos la caché
+            printf("\nT: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", globaltime, direccion_mem, ETQ, linea, palabra, tbl_cache[linea].Data[palabra]);
+            
+            // Imprimimos el contenido de la caché
             VolcarCACHE(tbl_cache);
         } else {
-            TratarFallo(tbl_cache, Simul_RAM, ETQ, linea, bloque);
-            numfallos++;
+            numFallos++;
             globaltime += 20;
-            printf("\nT: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", globaltime, numfallos, direccion_mem, ETQ, linea, palabra, bloque);
+            TratarFallo(tbl_cache, Simul_RAM, ETQ, linea, bloque);
+            printf("\nT: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", globaltime, numFallos, direccion_mem, ETQ, linea, palabra, bloque);
         }
-
-        // Ponemos la ejecución en pausa por 1 segundo e incrementamos el tiempo global
+        texto[pos_texto++] = tbl_cache[linea].Data[palabra];
+        
+        numAccesos++;
         sleep(1);
-    } while (tam_leido_txt > 0);
+    }
+    texto[pos_texto] = '\0'; // Cerramos el string
+
+    imprimirEtadisticas(texto, numAccesos);
+
 
     return 0;
 }
@@ -104,9 +105,7 @@ void LimpiarCACHE(T_CACHE_LINE tbl_cache[NUM_FILAS]) {
 }
 
 void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque) {
-    int pos_addr=0;
-
-    // Hacemos una comparación lógica and para quedarnos con los n prmeros bits y después los movemos al inicio
+    // Hacemos una comparación lógica AND para quedarnos con los n primeros bits y después los movemos al inicio
     *ETQ = 0b111110000000 & addr;
     *ETQ = *ETQ >> 7;
     *linea = 0b000001110000 & addr;
@@ -116,18 +115,30 @@ void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int
     *bloque = *bloque >> 4;
 }
 
+// Guardamos en la dirección de la caché la etiqueta y el bloque de la RAM
 void TratarFallo(T_CACHE_LINE *tbl_cache, char *MRAM, int ETQ, int linea, int bloque) {
     tbl_cache[linea].ETQ = ETQ;
     for(int i = 0; i < TAM_LINEA; i++)
         tbl_cache[linea].Data[i] = MRAM[(bloque * TAM_LINEA) + i];
 }
 
+// Imprime el contenido de la caché
 void VolcarCACHE(T_CACHE_LINE *tbl_cache) {
     for(int linea=0; linea < NUM_FILAS; linea++) {
-        printf("%X: ", tbl_cache[linea].ETQ);
-        for(int pos=0; pos < TAM_LINEA; pos++) {
+        printf("%02X: ", tbl_cache[linea].ETQ);
+        for(int pos=TAM_LINEA - 1; pos >= 0; pos--) {
             printf("%02X ", tbl_cache[linea].Data[pos]);
         }
         printf("\n");
     }
+}
+
+// Imprime las estadísticas del programa
+void imprimirEtadisticas(char* texto, int numAccesos) {
+    printf("\n\n======= Estadísticas =======\n");
+    printf("[+] Número total de accesos : %d\n", numAccesos);
+    printf("[+] Número de fallos        : %d\n", numFallos);
+    printf("[+] Tiempo medio de acceso  : %.2f\n", (float)globaltime / (float)numAccesos);
+    printf("[+] Palabra                 : %s\n", texto);
+    printf("================================\n");
 }
