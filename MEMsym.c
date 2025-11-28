@@ -45,7 +45,7 @@ int main(void)
     // Abrimos el fichero binario
     FILE *fd_bin = fopen("CONTENTS_RAM.bin", "rb");
     if (fd_bin == NULL) {
-        perror("[-] Error al abrir el archivo binario\n");
+        printf("[-] Error al abrir el archivo binario\n");
         return -1;
     }
 
@@ -59,7 +59,7 @@ int main(void)
     // Abrimos el fichero de texto
     FILE *fd_txt = fopen("accesos_memoria.txt", "r");
     if (fd_txt == NULL) {
-        perror("[-] Error al abrir el archivo de texto\n");
+        printf("[-] Error al abrir el archivo de texto\n");
         return -1;
     }
 
