@@ -22,7 +22,6 @@ Para leer archivos binarios, hay que hacer uso en el fopen de otros keywords com
 [+] Respuesta\
 ![alt text](capturas/respuesta2.1.png)
 ![alt text](capturas/respuesta2.2.png)
-![alt text](capturas/respuesta2.3.png)
 
 [+] Aprendizaje\
 Hemos aprendido el como poder escribir en archivos binarios ya que no lo vimos en clase.
