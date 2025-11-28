@@ -93,6 +93,9 @@ int main(void)
     // Cerramos el archivo txt
     fclose(fd_txt);
 
+    // Guardamos la caché en el archivo binario
+    guardarCache(tbl_cache);
+    
     return 0;
 }
 
