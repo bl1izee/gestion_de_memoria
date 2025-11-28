@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 #define NUM_LINEAS 8 // Numero de lineas de la caché
